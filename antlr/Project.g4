@@ -27,29 +27,32 @@ r_variable_declaration : type=TYPE var_name=VARIABLE_NAME (COMMA var_name=VARIAB
 r_assignment : var_name=VARIABLE_NAME OPERATOR_ASSIGN (r_expression | r_assignment) ;
 
 r_expression : r_numeric_expression #numericExpression
-           | r_bool_expression #boolExpression
-           | r_string_expression #stringExpression
-           | var_name=VARIABLE_NAME #variableExpression
-           ;
+             | r_bool_expression #boolExpression
+             | r_string_expression #stringExpression
+             ;
 
 r_numeric_expression : UNARY_NUMERIC_OPERATOR unary=r_numeric_expression #numericUnaryExpression
-                   | left=r_numeric_expression op=BINARY_NUMERIC_PRIORITY_OPERATOR right=r_numeric_expression #numericBinaryPriorityExpression
-                   | left=r_numeric_expression op=BINARY_NUMERIC_OPERATOR right=r_numeric_expression #numericBinaryExpression
-                   | PAREN_OPEN r_numeric_expression PAREN_CLOSE #numericParenthesisExpression
-                   | value=NUMBER #numericValueExpression
-                   ;
+                     | left=r_numeric_expression op=BINARY_NUMERIC_PRIORITY_OPERATOR right=r_numeric_expression #numericBinaryPriorityExpression
+                     | left=r_numeric_expression op=BINARY_NUMERIC_OPERATOR right=r_numeric_expression #numericBinaryExpression
+                     | PAREN_OPEN r_numeric_expression PAREN_CLOSE #numericParenthesisExpression
+                     | var_name=VARIABLE_NAME #numericVariableExpression
+                     | value=NUMBER #numericValueExpression
+                     ;
 
-r_bool_expression : UNARY_BOOL_OPERATOR unary=r_bool_expression #boolUnaryExpression
-                | left=r_bool_expression op=BINARY_BOOL_OPERATOR right=r_bool_expression #boolBinaryExpression
-                | PAREN_OPEN r_bool_expression PAREN_CLOSE #boolParenthesisExpression
-                | left=r_numeric_expression op=(COMPARISON_OPERATOR | EQUALITY_OPERATOR) right=r_numeric_expression #numericComparisonExpression
-                | left=r_string_expression EQUALITY_OPERATOR right=r_string_expression #stringComparisonExpression
-                | value=BOOL #boolValueExpression
-                ;
+r_bool_expression : left=VARIABLE_NAME op=(COMPARISON_OPERATOR | EQUALITY_OPERATOR) right=VARIABLE_NAME #boolVariableComparison
+                  | UNARY_BOOL_OPERATOR unary=r_bool_expression #boolUnaryExpression
+                  | left=r_bool_expression op=BINARY_BOOL_OPERATOR right=r_bool_expression #boolBinaryExpression
+                  | PAREN_OPEN r_bool_expression PAREN_CLOSE #boolParenthesisExpression
+                  | left=r_numeric_expression op=(COMPARISON_OPERATOR | EQUALITY_OPERATOR) right=r_numeric_expression #numericComparisonExpression
+                  | left=r_string_expression EQUALITY_OPERATOR right=r_string_expression #stringComparisonExpression
+                  | var_name=VARIABLE_NAME #boolVariableExpression
+                  | value=BOOL #boolValueExpression
+                  ;
 
 r_string_expression : left=r_string_expression op=OPERATOR_CONCAT right=r_string_expression #stringConcatExpression
-                  | value=STRING #stringValueExpression
-                  ;
+                    | var_name=VARIABLE_NAME #stringVariableExpression
+                    | value=STRING #stringValueExpression
+                    ;
 
 r_block: BLOCK_OPEN r_statement* BLOCK_CLOSE ;
 

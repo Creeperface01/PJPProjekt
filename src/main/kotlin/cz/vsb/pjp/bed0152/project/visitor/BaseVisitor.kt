@@ -59,4 +59,25 @@ class BaseVisitor : ProjectBaseVisitor<Unit>() {
         ctx.accept(stringExpressionVisitor)
         super.visitStringExpression(ctx)
     }
+
+    override fun visitNumericVariableExpression(ctx: ProjectParser.NumericVariableExpressionContext) {
+        ctx.accept(numericExpressionVisitor)
+        super.visitNumericVariableExpression(ctx)
+    }
+
+    override fun visitBoolVariableExpression(ctx: ProjectParser.BoolVariableExpressionContext) {
+        ctx.accept(booleanExpressionVisitor)
+        super.visitBoolVariableExpression(ctx)
+    }
+
+    override fun visitStringVariableExpression(ctx: ProjectParser.StringVariableExpressionContext) {
+        ctx.accept(stringExpressionVisitor)
+        super.visitStringVariableExpression(ctx)
+    }
+
+    override fun visitBoolVariableComparison(ctx: ProjectParser.BoolVariableComparisonContext) {
+        ctx.accept(booleanExpressionVisitor)
+
+        super.visitBoolVariableComparison(ctx)
+    }
 }

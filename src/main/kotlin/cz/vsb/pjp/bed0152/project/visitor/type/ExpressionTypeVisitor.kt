@@ -1,10 +1,12 @@
 package cz.vsb.pjp.bed0152.project.visitor.type
 
-import cz.vsb.pjp.bed0152.project.exception.ParseException
 import cz.vsb.pjp.bed0152.project.parser.ProjectBaseVisitor
 import cz.vsb.pjp.bed0152.project.parser.ProjectParser
 import cz.vsb.pjp.bed0152.project.parser.ProjectParser.R_numeric_expressionContext
+import cz.vsb.pjp.bed0152.project.parser.ProjectParser.Tokens
+import cz.vsb.pjp.bed0152.project.util.Operator
 import cz.vsb.pjp.bed0152.project.util.Type
+import cz.vsb.pjp.bed0152.project.util.require
 import cz.vsb.pjp.bed0152.project.visitor.BaseVisitor
 import org.antlr.v4.kotlinruntime.ParserRuleContext
 
@@ -22,15 +24,35 @@ open class ExpressionTypeVisitor(
 //        return block()
 //    }
 
-    override fun visitVariableExpression(ctx: ProjectParser.VariableExpressionContext): Type {
-        val type = variableTypeVisitor.visitVariableExpression(ctx)
+    override fun visitNumericVariableExpression(ctx: ProjectParser.NumericVariableExpressionContext): Type {
+        return checkVariable(ctx, setOf(Type.INT, Type.FLOAT))
+    }
 
-        ctx.require(expectedTypes.isEmpty() || expectedTypes.contains(type)) {
-            val varName = ctx.var_name?.text!!
-            "Expected type '$expectedTypes', but got variable '$varName' of type '$type'"
+    override fun visitBoolVariableExpression(ctx: ProjectParser.BoolVariableExpressionContext): Type {
+        return checkVariable(ctx, setOf(Type.BOOL))
+    }
+
+    override fun visitStringVariableExpression(ctx: ProjectParser.StringVariableExpressionContext): Type {
+        return checkVariable(ctx, setOf(Type.STRING))
+    }
+
+    private fun checkVariable(ctx: ParserRuleContext, expressionTypes: Set<Type>): Type {
+        val variableType = ctx.accept(variableTypeVisitor)!!
+
+        val varName = ctx.getToken(Tokens.VARIABLE_NAME, 0)?.text!!
+        val typeIntersection = expectedTypes.filter { expectedType ->
+            expressionTypes.any { it.canBeCastedTo(expectedType) }
         }
 
-        return type
+        ctx.require(typeIntersection.isNotEmpty()) {
+            "Expression types '$expressionTypes' are not compatible with variable $varName of type '$variableType'"
+        }
+
+        ctx.require(expectedTypes.isEmpty() || expectedTypes.contains(variableType)) {
+            "Expected type '$expectedTypes', but got variable '$varName' of type '$variableType'"
+        }
+
+        return variableType
     }
 
     override fun visitNumericBinaryPriorityExpression(ctx: ProjectParser.NumericBinaryPriorityExpressionContext): Type {
@@ -59,6 +81,26 @@ open class ExpressionTypeVisitor(
         return Type.STRING
     }
 
+    override fun visitBoolVariableComparison(ctx: ProjectParser.BoolVariableComparisonContext): Type {
+        val leftVariableName = ctx.left?.text!!
+        val rightVariableName = ctx.right?.text!!
+
+        val leftType = baseVisitor.getVariable(leftVariableName)
+        val rightType = baseVisitor.getVariable(rightVariableName)
+
+        ctx.require(leftType == rightType || leftType.isNumeric() && rightType.isNumeric()) {
+            "Incompatible types for comparison got '$leftType' and '$rightType'"
+        }
+
+        val operator = Operator.getByToken(ctx.op?.text!!)
+
+        ctx.require(operator.isBinary()) {
+            "Expected binary operator, but got '${operator.name}'"
+        }
+
+        return Type.BOOL
+    }
+
     private fun processBinaryExpression(left: R_numeric_expressionContext, right: R_numeric_expressionContext): Type {
         val leftType = left.accept(this)!!
         val rightType = right.accept(this)!!
@@ -76,33 +118,5 @@ open class ExpressionTypeVisitor(
         }
 
         return Type.INT
-    }
-
-    protected fun ParserRuleContext.castType(
-        expected: Type,
-        actual: Type,
-        message: (() -> String)? = null
-    ) = castType(setOf(expected), actual, message)
-
-    protected fun ParserRuleContext.castType(expected: Set<Type>, actual: Type, message: (() -> String)? = null) {
-        if (expected.contains(actual)) {
-            return
-        }
-
-        if (actual == Type.INT && expected.contains(Type.FLOAT)) {
-            return
-        }
-
-        error(if (message != null) message() else "Expected type '$expected', but got '$actual'")
-    }
-
-    protected fun ParserRuleContext.require(condition: Boolean, message: () -> String) {
-        if (!condition) {
-            error(message())
-        }
-    }
-
-    protected fun ParserRuleContext.error(message: String) {
-        throw ParseException(this, message)
     }
 }

@@ -17,7 +17,9 @@ fun main() {
         string d;
         d = "test";
         
-        if(1 == 2) {
+        float e;
+        
+        if(e >= a) {
         }
     """.trimIndent()
 

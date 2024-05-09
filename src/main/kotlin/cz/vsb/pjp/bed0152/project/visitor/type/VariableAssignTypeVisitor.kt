@@ -2,6 +2,7 @@ package cz.vsb.pjp.bed0152.project.visitor.type
 
 import cz.vsb.pjp.bed0152.project.parser.ProjectParser
 import cz.vsb.pjp.bed0152.project.util.Type
+import cz.vsb.pjp.bed0152.project.util.castType
 import cz.vsb.pjp.bed0152.project.visitor.BaseVisitor
 
 class VariableAssignTypeVisitor(

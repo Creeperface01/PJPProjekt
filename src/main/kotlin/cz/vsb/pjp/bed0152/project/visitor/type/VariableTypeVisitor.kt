@@ -9,8 +9,23 @@ class VariableTypeVisitor(
     private val baseVisitor: BaseVisitor
 ) : ProjectBaseVisitor<Type>() {
 
-    override fun visitVariableExpression(ctx: ProjectParser.VariableExpressionContext): Type {
-        val varName = ctx.var_name?.text!!
+    override fun visitNumericVariableExpression(ctx: ProjectParser.NumericVariableExpressionContext): Type {
+        return checkVariable(ctx.var_name?.text!!)
+    }
+
+    override fun visitBoolVariableExpression(ctx: ProjectParser.BoolVariableExpressionContext): Type {
+        return checkVariable(ctx.var_name?.text!!)
+    }
+
+    override fun visitStringVariableExpression(ctx: ProjectParser.StringVariableExpressionContext): Type {
+        return checkVariable(ctx.var_name?.text!!)
+    }
+
+    override fun visitBoolVariableComparison(ctx: ProjectParser.BoolVariableComparisonContext): Type {
+        return super.visitBoolVariableComparison(ctx)
+    }
+
+    private fun checkVariable(varName: String): Type {
         return baseVisitor.variables[varName] ?: error("Variable $varName not found")
     }
 }
