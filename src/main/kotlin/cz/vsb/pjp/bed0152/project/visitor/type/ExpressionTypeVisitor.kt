@@ -4,25 +4,15 @@ import cz.vsb.pjp.bed0152.project.parser.ProjectBaseVisitor
 import cz.vsb.pjp.bed0152.project.parser.ProjectParser
 import cz.vsb.pjp.bed0152.project.parser.ProjectParser.R_numeric_expressionContext
 import cz.vsb.pjp.bed0152.project.parser.ProjectParser.Tokens
-import cz.vsb.pjp.bed0152.project.util.Operator
-import cz.vsb.pjp.bed0152.project.util.Type
-import cz.vsb.pjp.bed0152.project.util.require
-import cz.vsb.pjp.bed0152.project.visitor.BaseVisitor
+import cz.vsb.pjp.bed0152.project.util.*
 import org.antlr.v4.kotlinruntime.ParserRuleContext
 
 open class ExpressionTypeVisitor(
-    protected val baseVisitor: BaseVisitor,
+    protected val variablesHolder: VariablesHolder,
     protected val expectedTypes: Set<Type>
 ) : ProjectBaseVisitor<Type>() {
-//    protected val expectedTypes = mutableSetOf<Type>()
 
-    private val variableTypeVisitor = VariableTypeVisitor(baseVisitor)
-
-//    fun <T> withExpectedTypes(vararg types: Type, block: ExpressionTypeVisitor.() -> T): T {
-//        expectedTypes.clear()
-//        expectedTypes.addAll(types)
-//        return block()
-//    }
+    private val variableTypeVisitor = VariableTypeVisitor(variablesHolder)
 
     override fun visitNumericVariableExpression(ctx: ProjectParser.NumericVariableExpressionContext): Type {
         return checkVariable(ctx, setOf(Type.INT, Type.FLOAT))
@@ -38,6 +28,10 @@ open class ExpressionTypeVisitor(
 
     private fun checkVariable(ctx: ParserRuleContext, expressionTypes: Set<Type>): Type {
         val variableType = ctx.accept(variableTypeVisitor)!!
+
+        if (expectedTypes.isEmpty()) {
+            return variableType
+        }
 
         val varName = ctx.getToken(Tokens.VARIABLE_NAME, 0)?.text!!
         val typeIntersection = expectedTypes.filter { expectedType ->
@@ -73,6 +67,14 @@ open class ExpressionTypeVisitor(
         return Type.INT
     }
 
+    override fun visitNumericUnaryExpression(ctx: ProjectParser.NumericUnaryExpressionContext): Type {
+        return ctx.expr.accept(this)
+    }
+
+    override fun visitNumericParenthesisExpression(ctx: ProjectParser.NumericParenthesisExpressionContext): Type {
+        return ctx.expr.accept(this)
+    }
+
     override fun visitBoolExpression(ctx: ProjectParser.BoolExpressionContext): Type {
         return Type.BOOL
     }
@@ -81,12 +83,16 @@ open class ExpressionTypeVisitor(
         return Type.STRING
     }
 
+    override fun visitBoolUnaryExpression(ctx: ProjectParser.BoolUnaryExpressionContext): Type {
+        return Type.BOOL
+    }
+
     override fun visitBoolVariableComparison(ctx: ProjectParser.BoolVariableComparisonContext): Type {
         val leftVariableName = ctx.left?.text!!
         val rightVariableName = ctx.right?.text!!
 
-        val leftType = baseVisitor.getVariable(leftVariableName)
-        val rightType = baseVisitor.getVariable(rightVariableName)
+        val leftType = variablesHolder.getVariable(leftVariableName)
+        val rightType = variablesHolder.getVariable(rightVariableName)
 
         ctx.require(leftType == rightType || leftType.isNumeric() && rightType.isNumeric()) {
             "Incompatible types for comparison got '$leftType' and '$rightType'"
@@ -98,7 +104,33 @@ open class ExpressionTypeVisitor(
             "Expected binary operator, but got '${operator.name}'"
         }
 
+        if (leftType.isNumeric()) {
+            ctx.require(operator.isComparison()) {
+                "Expected comparison operator, but got '${operator.name}'"
+            }
+        } else if (leftType == Type.BOOL) {
+            ctx.require(operator.isLogical() || operator == Operator.EQ || operator == Operator.NEQ) {
+                "Expected logical operator, but got '${operator.name}'"
+            }
+        } else if (leftType == Type.STRING) {
+            ctx.require(operator == Operator.EQ || operator == Operator.NEQ || operator == Operator.CONCAT) {
+                "Expected EQ or NEQ operator, but got '${operator.name}'"
+            }
+        }
+
         return Type.BOOL
+    }
+
+    override fun visitR_assignment(ctx: ProjectParser.R_assignmentContext): Type {
+        ctx.assignment?.let { assignmentCtx ->
+            return assignmentCtx.accept(this)
+        }
+
+        val varName = ctx.var_name?.text!!
+        val varType = variablesHolder.getVariable(varName)
+
+        val expr = ctx.expr!!
+        return expr.accept(ExpressionTypeVisitor(variablesHolder, setOf(varType)))!!
     }
 
     private fun processBinaryExpression(left: R_numeric_expressionContext, right: R_numeric_expressionContext): Type {

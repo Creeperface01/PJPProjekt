@@ -3,21 +3,22 @@ package cz.vsb.pjp.bed0152.project.visitor
 import cz.vsb.pjp.bed0152.project.parser.ProjectBaseVisitor
 import cz.vsb.pjp.bed0152.project.parser.ProjectParser
 import cz.vsb.pjp.bed0152.project.util.Type
+import cz.vsb.pjp.bed0152.project.util.VariablesHolder
 import cz.vsb.pjp.bed0152.project.visitor.type.ExpressionTypeVisitor
 import cz.vsb.pjp.bed0152.project.visitor.type.VariableAssignTypeVisitor
 
-class BaseVisitor : ProjectBaseVisitor<Unit>() {
+class BaseVisitor : ProjectBaseVisitor<Unit>(), VariablesHolder {
     private val booleanExpressionVisitor = ExpressionTypeVisitor(this, setOf(Type.BOOL))
     private val numericExpressionVisitor = ExpressionTypeVisitor(this, setOf(Type.INT, Type.FLOAT))
     private val stringExpressionVisitor = ExpressionTypeVisitor(this, setOf(Type.STRING))
 
-    val variables = mutableMapOf<String, Type>()
+    private val variables = mutableMapOf<String, Type>()
 
-    fun getVariable(varName: String): Type {
+    override fun getVariable(varName: String): Type {
         return variables[varName] ?: error("Variable $varName not found")
     }
 
-    fun getVariableOrNull(varName: String): Type? {
+    override fun getVariableOrNull(varName: String): Type? {
         return variables[varName]
     }
 

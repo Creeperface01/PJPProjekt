@@ -2,6 +2,7 @@ package cz.vsb.pjp.bed0152.project.util
 
 import cz.vsb.pjp.bed0152.project.exception.ParseException
 import org.antlr.v4.kotlinruntime.ParserRuleContext
+import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 
 fun ParserRuleContext.castType(
     expected: Type,
@@ -29,4 +30,8 @@ fun ParserRuleContext.require(condition: Boolean, message: () -> String) {
 
 fun ParserRuleContext.error(message: String) {
     throw ParseException(this, message)
+}
+
+fun <T> ParserRuleContext?.accept(visitor: ParseTreeVisitor<out T>): T {
+    return this!!.accept(visitor)!!
 }

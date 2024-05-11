@@ -1,28 +1,39 @@
 package cz.vsb.pjp.bed0152.project.util
 
+import cz.vsb.pjp.bed0152.project.compiler.Instruction
+import cz.vsb.pjp.bed0152.project.compiler.InstructionType
+
 enum class Operator(
-    val token: String
+    val token: String,
+    val instructionTypes: List<InstructionType>,
 ) {
-    PLUS("+"),
-    MINUS("-"),
-    MUL("*"),
-    DIV("/"),
-    MOD("%"),
-    EQ("=="),
-    NEQ("!="),
-    LT("<"),
-    GT(">"),
-    LTE("<="),
-    GTE(">="),
-    AND("&&"),
-    OR("||"),
-    NOT("!"),
+    PLUS("+", InstructionType.ADD),
+    MINUS("-", InstructionType.SUB),
+    CONCAT(".", InstructionType.CONCAT),
+    MUL("*", InstructionType.MUL),
+    DIV("/", InstructionType.DIV),
+    MOD("%", InstructionType.MOD),
+    EQ("==", InstructionType.EQ),
+    NEQ("!=", InstructionType.EQ, InstructionType.NOT),
+    LT("<", InstructionType.LT),
+    GT(">", InstructionType.GT),
+    LTE("<=", InstructionType.LT),
+    GTE(">=", InstructionType.GT),
+    AND("&&", InstructionType.AND),
+    OR("||", InstructionType.OR),
+    NOT("!", InstructionType.NOT),
     ASSIGN("="),
     PLUS_ASSIGN("+="),
     MINUS_ASSIGN("-="),
     MUL_ASSIGN("*="),
     DIV_ASSIGN("/="),
     MOD_ASSIGN("%=");
+
+    val instructions: List<Instruction> by lazy {
+        instructionTypes.map { it.create() }
+    }
+
+    constructor(token: String, vararg instructionTypes: InstructionType) : this(token, instructionTypes.toList())
 
     fun isComparison() = this in comparisonOperators
 
